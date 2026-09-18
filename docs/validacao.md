@@ -38,4 +38,8 @@ eng 7d4322bd2a7749724879683fc3912cb542f19906c83bcc1a52132556427170b2
 por c4932b937207a9514b7514d518b931a99938c02a28a5a5a553f8599ed58b7deb
 ```
 
-Os testes e exemplos usam conteúdo sintético. Não foram processados documentos reais nem medidos precisão, falsos negativos ou HH poupadas. O workflow para Windows/Linux foi atualizado para Python 3.14, mas não foi executado no GitHub nesta sessão. Os resultados da versão 0.2 estão preservados em `archive/v0.2/docs/validacao.md`.
+Os testes e exemplos usam conteúdo sintético. Não foram processados documentos reais nem medidos precisão, falsos negativos ou HH poupadas. Os resultados da versão 0.2 estão preservados localmente em `archive/v0.2/docs/validacao.md`.
+
+## Publicação e CI
+
+O projeto foi publicado em [YanSamuray/tarja](https://github.com/YanSamuray/tarja), sob AGPL-3.0-only. A [execução inicial do GitHub Actions](https://github.com/YanSamuray/tarja/actions/runs/35340615730), referente ao commit `ad73c7c`, concluiu com sucesso em Windows e Linux com Python 3.14: instalação pelo lock, Ruff, testes, build e inspeção dos artefatos. O workflow não instala modelos de OCR nem LibreOffice; os testes que dependem dessas ferramentas seguem as condições de disponibilidade descritas acima. A validação de OCR real relatada nesta página foi executada localmente.
