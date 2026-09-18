@@ -1,0 +1,63 @@
+# Ambientes e arquivos gerados
+.venv/
+venv/
+.venv-*/
+.cache/
+.runtime/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+build/
+dist/
+**/data/
+tmp/
+output/
+.env
+pytest-cache-files-*/
+
+# Histórico permanece local; publicar apenas o projeto ativo
+/archive/
+
+# Configurações privadas e credenciais
+.env.*
+!.env.example
+!.env.template
+*.pem
+*.key
+*.p12
+*.pfx
+*.keystore
+id_rsa
+id_ed25519
+.credentials/
+credentials.json
+*.log
+.coverage
+htmlcov/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Documentos e imagens locais, mesmo fora de data/ ou output/
+# Os exemplos públicos são gerados pelo código em examples/.
+*.[pP][dD][fF]
+*.[dD][oO][cC]
+*.[dD][oO][cC][xX]
+*.[oO][dD][tT]
+*.[rR][tT][fF]
+*.[tT][xX][tT]
+*.[xX][lL][sS]
+*.[xX][lL][sS][xX]
+*.[cC][sS][vV]
+*.[tT][sS][vV]
+*.[pP][pP][tT][xX]
+*.[pP][nN][gG]
+*.[jJ][pP][gG]
+*.[jJ][pP][eE][gG]
+*.[tT][iI][fF]
+*.[tT][iI][fF][fF]
+*.[bB][mM][pP]
+*.[wW][eE][bB][pP]
+*.zip

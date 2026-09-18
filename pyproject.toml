@@ -1,0 +1,53 @@
+[project]
+name = "tarja-documentos"
+version = "0.3.0"
+description = "Censura local de identificadores pessoais em PDFs, imagens e documentos de texto."
+authors = [
+    {name = "Yan Samuray",email = "yansamuray@gmail.com"}
+]
+readme = "README.md"
+license = "AGPL-3.0-only"
+license-files = ["LICENSE"]
+requires-python = ">=3.14"
+dependencies = [
+    "pymupdf>=1.28.2,<2",
+    "pillow>=12.3,<13"
+]
+
+[project.scripts]
+tarja = "tarja.main:main"
+
+[project.urls]
+Repository = "https://github.com/YanSamuray/tarja"
+Issues = "https://github.com/YanSamuray/tarja/issues"
+
+[dependency-groups]
+dev = ["pytest>=9,<10", "pypdf>=6,<7", "reportlab>=5,<6", "ruff>=0.16,<0.17"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "ocr: integração com os modelos locais de OCR",
+    "office: integração com LibreOffice instalado"
+]
+addopts = "--import-mode=importlib"
+norecursedirs = ["archive", ".venv", "data", "output"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py314"
+extend-exclude = ["archive", ".cache", ".runtime", "data", "output", "tmp", "dist", "build"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[build-system]
+requires = ["hatchling>=1.27,<2"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/tarja"]
+
+[tool.hatch.build.targets.sdist]
+include = ["/src", "/tests", "/docs", "/examples", "/scripts", "/README.md", "/CHANGELOG.md", "/LICENSE", "/pyproject.toml", "/uv.lock", "/.python-version"]
+exclude = ["/archive", "/data", "/output", "/.cache", "/.runtime", "/.venv", "**/__pycache__", "*.pyc"]
