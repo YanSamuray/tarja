@@ -75,7 +75,7 @@ uv run tarja imagem.png imagem-censurada.pdf --todos --tessdata .runtime/tessdat
 uv run tarja documento.docx documento-censurado.pdf --rg --cnh
 ```
 
-Não há exportação para DOCX editável, censura de planilhas ou apresentações nesta versão. A integração real com LibreOffice não foi executada neste ambiente; consulte as [evidências de validação](docs/validacao.md).
+Não há exportação para DOCX editável, censura de planilhas ou apresentações nesta versão. A integração real com LibreOffice é executada no CI em Linux; no Windows local ela não foi executada. Consulte as [evidências de validação](docs/validacao.md).
 
 ## Processar pastas
 
