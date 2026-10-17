@@ -105,7 +105,7 @@ def main(argv: list[str] | None = None) -> int:
         run_id = uuid4().hex
         report_path = report_dir / f"report-{run_id}.json"
         report = {
-            "schema_version": 2,
+            "schema_version": 3,
             "run_id": run_id,
             "created_at": datetime.now(UTC).isoformat(),
             "policy": {k: v for k, v in asdict(policy).items() if k != "tessdata"},
@@ -119,7 +119,11 @@ def main(argv: list[str] | None = None) -> int:
                 )
                 report["documents"].append({"document": number, **asdict(result)})
                 count = sum(sum(p.counts.values()) for p in result.pages)
-                print(f"[{number}/{len(pairs)}] {count} ocorrência(s); cópia gerada para revisão.")
+                review = sum(len(p.candidates) for p in result.pages)
+                summary = f"{count} ocorrência(s)"
+                if review:
+                    summary += f", {review} ponto(s) para conferência"
+                print(f"[{number}/{len(pairs)}] {summary}; cópia gerada para revisão.")
             except ProcessingError as error:
                 failed += 1
                 report["documents"].append(

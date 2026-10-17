@@ -15,11 +15,37 @@ class PageText:
     used_ocr: bool
 
 
+# Segmentos de retas e curvas preenchidos a partir dos quais o desenho pode ser texto.
+# Um CPF convertido em curvas tem cerca de 200; tabelas e gráficos de barras usam
+# retângulos, que não entram na conta.
+OUTLINE_SEGMENTS = 60
+
+
 def requires_ocr(page: pymupdf.Page) -> bool:
     # Até uma página com cabeçalho digital pode conter uma imagem com dados pessoais.
-    return bool(page.get_image_info()) or (
-        not page.get_text().strip() and bool(page.get_drawings())
-    )
+    if page.get_image_info():
+        return True
+    text = page.get_text()
+    if not text.strip():
+        return bool(page.get_drawings())
+    # Fontes sem mapeamento Unicode e texto convertido em curvas ficam visíveis na
+    # página exportada, mas não aparecem corretamente na extração nativa.
+    return unreliable_text(text) or has_vector_outlines(page)
+
+
+def unreliable_text(text: str) -> bool:
+    """Caracteres de substituição ou de controle indicam glifos sem mapeamento Unicode."""
+    return sum(c == "\ufffd" or (c < " " and c not in "\t\n\r") for c in text) >= 3
+
+
+def has_vector_outlines(page: pymupdf.Page) -> bool:
+    segments = 0
+    for drawing in page.get_drawings():
+        if drawing.get("fill") is not None:
+            segments += sum(item[0] in ("l", "c", "qu") for item in drawing["items"])
+            if segments >= OUTLINE_SEGMENTS:
+                return True
+    return False
 
 
 def extract_page(page: pymupdf.Page, policy: Policy) -> PageText:

@@ -54,6 +54,28 @@ def test_invalid_encoding_does_not_export(tmp_path):
     assert not target.exists()
 
 
+def test_windows_line_breaks_and_markdown_emphasis(tmp_path):
+    source, target = tmp_path / "a.md", tmp_path / "b.md"
+    source.write_bytes(b"CPF: 123.456.\r\n789-00\r\n_987.654.321-00_\r\n")
+    report = censor_document(source, target, Policy(cpf_mode="full"))
+    assert target.read_bytes() == b"CPF: ***.***.\r\n***-**\r\n_***.***.***-**_\r\n"
+    assert report.pages[0].counts == {"CPF": 2}
+
+
+def test_irregular_cpf_is_fully_masked_and_suspects_are_located(tmp_path):
+    source, target = tmp_path / "a.txt", tmp_path / "b.txt"
+    source.write_bytes(b"CPF: 1234567890\ntelefone: 11987654321\n")
+    report = censor_document(source, target)
+    assert target.read_bytes() == b"CPF: **********\ntelefone: 11987654321\n"
+    page = report.pages[0]
+    assert page.warnings == [
+        "cpf_irregular_expanded_to_full",
+        "unredacted_candidates_require_review",
+    ]
+    candidate = {"entity": "CPF", "reason": "excluded_label", "start": 26, "end": 37}
+    assert page.candidates == [candidate]
+
+
 @pytest.mark.parametrize(
     ("flags", "expected"),
     [
@@ -71,6 +93,7 @@ def test_cli_entity_switches(tmp_path, flags, expected):
     source.write_bytes(SAMPLE.encode("utf-8"))
     assert main([str(source), str(target), *flags]) == 0
     report = json.loads(next(tmp_path.glob("report-*.json")).read_text(encoding="utf-8"))
+    assert report["schema_version"] == 3
     assert report["policy"]["entities"] == expected
     assert set(report["documents"][0]["pages"][0]["counts"]) == set(expected)
     if "CNH" not in expected:
