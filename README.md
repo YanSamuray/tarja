@@ -25,23 +25,30 @@ O arquivo `.python-version` seleciona a série 3.14. O `pyproject.toml` estabele
 
 **Por padrão, somente CPF é habilitado.** As flags acrescentam outras categorias:
 
+
+ Somente CPF:
 ```powershell
-# Somente CPF
 uv run tarja entrada.pdf saida.pdf
+```
 
-# CPF + RG + CNH
+CPF + RG + CNH:
+```powershell
 uv run tarja entrada.pdf saida.pdf --rg --cnh
-
-# CPF + título de eleitor
+```
+CPF + título de eleitor:
+```powershell
 uv run tarja entrada.pdf saida.pdf --titulo-eleitor
-
-# Todas as quatro categorias
+```
+Todas as quatro categorias:
+```powershell
 uv run tarja entrada.pdf saida.pdf --todos
-
-# Seleção exata, sem CPF implícito
+```
+Seleção exata, sem CPF implícito:
+```powershell
 uv run tarja entrada.pdf saida.pdf --entities RG CNH
-
-# CPF completo, em vez de parcial
+```
+CPF completo, em vez de parcial:
+```powershell
 uv run tarja entrada.pdf saida.pdf --cpf-mode full
 ```
 
