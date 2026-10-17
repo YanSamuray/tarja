@@ -4,7 +4,7 @@
 
 O Tarja nasceu para reduzir o trabalho manual de ocultação de documentos pessoais realizado por auditores fiscais e consultores. Busca os identificadores selecionados, aplica a censura e gera um relatório para revisão, preservando o arquivo original.
 
-Versão atual: **0.3.0**. Requer **Python >=3.11**, testado de 3.11 a 3.14, e utiliza **uv** para ambiente, dependências e execução. O nome da distribuição Python é `tarja-documentos`; o comando e o pacote são `tarja`.
+Versão atual: **0.4.0**. Requer **Python >=3.11**, testado de 3.11 a 3.14, e utiliza **uv** para ambiente, dependências e execução. O nome da distribuição Python é `tarja-documentos`; o comando e o pacote são `tarja`.
 
 ## Começar
 

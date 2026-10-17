@@ -1,6 +1,6 @@
 [project]
 name = "tarja-documentos"
-version = "0.3.0"
+version = "0.4.0"
 description = "Censura local de identificadores pessoais em PDFs, imagens e documentos de texto."
 authors = [
     {name = "Yan Samuray",email = "yansamuray@gmail.com"}

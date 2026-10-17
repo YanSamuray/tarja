@@ -1,6 +1,6 @@
 # Alterações
 
-## Não publicado
+## 0.4.0 - 2026-10-17
 
 ### Corrigido
 
