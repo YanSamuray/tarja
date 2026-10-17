@@ -66,7 +66,7 @@ def test_export_contains_only_sanitized_pixels_and_neutral_metadata(pdf, tmp_pat
         x0, y0, x1, y1 = report.pages[0].regions[0]["bbox"]
         x = round((x0 + x1) / 2 * 150 / 72)
         y = round((y0 + y1) / 2 * 150 / 72)
-        assert image.pixel(x, y)[:3] == (0, 0, 0)
+        assert set(image.pixel(x, y)) == {0}
         assert doc[0].first_annot is None
 
 
@@ -74,8 +74,11 @@ def test_preserves_unrelated_region_pixels(pdf, tmp_path):
     output = tmp_path / "out.pdf"
     censor_pdf(pdf, output, Policy(dpi=150))
     with pymupdf.open(pdf) as original, pymupdf.open(output) as redacted:
-        before = original[0].get_pixmap(dpi=150, alpha=False)
+        rendered = original[0].get_pixmap(dpi=150, colorspace=pymupdf.csRGB, alpha=False)
+        # A página não tem cor, então a saída vem em tons de cinza, sem perda.
+        before = pymupdf.Pixmap(pymupdf.csGRAY, rendered)
         after = pymupdf.Pixmap(redacted, redacted[0].get_images()[0][0])
+        assert after.n == 1
         # A faixa com "123 unidades, item 00" deve ser idêntica.
         assert before.width == after.width
         y0, y1 = 75 * 150 // 72, 103 * 150 // 72
@@ -83,6 +86,20 @@ def test_preserves_unrelated_region_pixels(pdf, tmp_path):
             before.samples[y0 * before.stride : y1 * before.stride]
             == (after.samples[y0 * after.stride : y1 * after.stride])
         )
+
+
+def test_colorless_pages_are_exported_in_grayscale_and_color_is_kept(tmp_path):
+    source, target = tmp_path / "pages.pdf", tmp_path / "out.pdf"
+    with pymupdf.open() as doc:
+        doc.new_page().insert_text((30, 50), "CPF: 123.456.789-09", fontsize=12)
+        colored = doc.new_page()
+        colored.insert_text((30, 50), "Documento com logotipo", fontsize=12)
+        colored.draw_rect(pymupdf.Rect(30, 80, 130, 120), fill=(0.1, 0.4, 0.8))
+        doc.save(source)
+    censor_pdf(source, target, Policy(dpi=150))
+    with pymupdf.open(target) as doc:
+        channels = [pymupdf.Pixmap(doc, page.get_images()[0][0]).n for page in doc]
+    assert channels == [1, 3]
 
 
 def test_refuses_overwrite_and_source_as_target(pdf, tmp_path):
@@ -146,11 +163,8 @@ def test_real_ocr_mixed_pdf(tmp_path):
         assert "12345678900" not in text
         image = pymupdf.Pixmap(doc, doc[1].get_images()[0][0])
         x0, y0, x1, y1 = report.pages[1].regions[0]["bbox"]
-        assert image.pixel(round((x0 + x1) / 2 * 300 / 72), round((y0 + y1) / 2 * 300 / 72)) == (
-            0,
-            0,
-            0,
-        )
+        x, y = round((x0 + x1) / 2 * 300 / 72), round((y0 + y1) / 2 * 300 / 72)
+        assert set(image.pixel(x, y)) == {0}
 
 
 def test_rotated_page_and_full_cpf_mode(pdf, tmp_path):
@@ -195,7 +209,7 @@ def test_pending_redaction_marks_are_applied(tmp_path):
     assert report.pages[0].warnings == ["existing_redactions_applied"]
     with pymupdf.open(target) as doc:
         image = pymupdf.Pixmap(doc, doc[0].get_images()[0][0])
-        assert image.pixel(round(135 * 150 / 72), round(55 * 150 / 72))[:3] == (0, 0, 0)
+        assert set(image.pixel(round(135 * 150 / 72), round(55 * 150 / 72))) == {0}
 
 
 def test_xfa_form_is_refused(tmp_path):
@@ -281,7 +295,7 @@ def assert_black_at_regions(output, report, dpi):
         for region in report.pages[0].regions:
             x0, y0, x1, y1 = region["bbox"]
             x, y = round((x0 + x1) / 2 * dpi / 72), round((y0 + y1) / 2 * dpi / 72)
-            assert image.pixel(x, y)[:3] == (0, 0, 0)
+            assert set(image.pixel(x, y)) == {0}
 
 
 def test_labels_and_separators_that_used_to_leak_are_redacted(tmp_path):

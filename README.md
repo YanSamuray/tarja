@@ -125,7 +125,7 @@ A conversão ocorre sem interface gráfica, em um perfil temporário separado, c
 
 ## O que é removido
 
-PDFs são reconstruídos a partir das imagens das páginas **já censuradas**. A tarja não é uma anotação removível que revele o texto original. A saída não leva texto oculto, metadados originais, anexos ou revisões do PDF. Essa escolha perde pesquisa, seleção de texto, acessibilidade semântica e assinaturas digitais, e pode aumentar o tamanho do arquivo.
+PDFs são reconstruídos a partir das imagens das páginas **já censuradas**. A tarja não é uma anotação removível que revele o texto original. A saída não leva texto oculto, metadados originais, anexos ou revisões do PDF. Essa escolha perde pesquisa, seleção de texto, acessibilidade semântica e assinaturas digitais, e pode aumentar o tamanho do arquivo. Para reduzi-lo, páginas sem cor são exportadas em tons de cinza, sem perda visível e com arquivos cerca de 45% menores; páginas com qualquer cor mantêm a cor.
 
 Campos de formulário e anotações visíveis, como comentários em caixa de texto e carimbos, são incorporados à página antes da censura. Assim seus valores também são procurados e ficam sob a tarja, e não por cima dela. Campos e anotações ocultos não são exibidos e não chegam à saída. Tarjas que alguém marcou no PDF, mas não aplicou, são aplicadas antes da busca. Os dois casos aparecem nos avisos do relatório.
 
