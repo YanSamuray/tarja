@@ -1,6 +1,6 @@
 [project]
 name = "tarja-documentos"
-version = "0.3.0"
+version = "0.4.0"
 description = "Censura local de identificadores pessoais em PDFs, imagens e documentos de texto."
 authors = [
     {name = "Yan Samuray",email = "yansamuray@gmail.com"}
@@ -8,7 +8,7 @@ authors = [
 readme = "README.md"
 license = "AGPL-3.0-only"
 license-files = ["LICENSE"]
-requires-python = ">=3.14"
+requires-python = ">=3.11"
 dependencies = [
     "pymupdf>=1.28.2,<2",
     "pillow>=12.3,<13"
@@ -35,7 +35,7 @@ norecursedirs = ["archive", ".venv", "data", "output"]
 
 [tool.ruff]
 line-length = 100
-target-version = "py314"
+target-version = "py311"
 extend-exclude = ["archive", ".cache", ".runtime", "data", "output", "tmp", "dist", "build"]
 
 [tool.ruff.lint]

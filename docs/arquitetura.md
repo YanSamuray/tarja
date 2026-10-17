@@ -39,7 +39,7 @@ O motor de construção é Hatchling, com pacote explicitamente selecionado em `
 
 ## Semântica dos formatos
 
-PDFs e imagens resultam em PDF estático. Não há modo de PDF pesquisável implementado. Os metadados, imagens e streams do original não são anexados; cada página é renderizada após a censura e colocada num documento novo.
+PDFs e imagens resultam em PDF estático. Não há modo de PDF pesquisável implementado. Os metadados, imagens e streams do original não são anexados; cada página é renderizada após a censura e colocada num documento novo. Quando todos os pixels da página renderizada são neutros (R = G = B), ela é gravada em tons de cinza. A conversão não perde informação e reduz o arquivo em cerca de 45%; havendo qualquer cor, a página fica em RGB.
 
 Campos de formulário e anotações são desenhados acima do conteúdo da página. Por isso, antes da extração, `flatten_annotations` os incorpora ao conteúdo (`Document.bake`). Caso contrário, o valor de um campo apareceria por cima da tarja na imagem exportada. Tarjas marcadas e não aplicadas são aplicadas antes do `bake`, pois só incorporá-las deixaria visível o texto que alguém pretendia ocultar. Elementos ocultos não são desenhados e não chegam à saída. Formulários XFA continuam recusados, porque o MuPDF não exibe seu conteúdo dinâmico.
 

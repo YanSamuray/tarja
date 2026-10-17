@@ -1,6 +1,6 @@
 # Alterações
 
-## Não publicado
+## 0.4.0 - 2026-10-17
 
 ### Corrigido
 
@@ -17,6 +17,8 @@
 
 ### Alterado
 
+- Python mínimo 3.11 (antes 3.14), sem mudança nas versões das dependências. O CI testa 3.11 a 3.14 no Linux e 3.11 e 3.14 no Windows; `.python-version` continua em 3.14 para desenvolvimento.
+- Páginas sem cor são exportadas em tons de cinza, sem perda: PDFs cerca de 45% menores (10 páginas: de 3,8 MB para 2,1 MB). Páginas com cor continuam em RGB.
 - PDFs com campos de formulário ou anotações deixam de ser recusados: esses elementos são incorporados à página antes da censura (aviso `annotations_flattened`). Tarjas marcadas e não aplicadas são aplicadas antes da busca (aviso `existing_redactions_applied`). Formulários XFA continuam recusados.
 - Novos rótulos:
   - RG: `R.G.`, `identidade`, prefixo de UF;

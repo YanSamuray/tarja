@@ -8,6 +8,7 @@ from pathlib import Path
 from time import perf_counter
 
 import pymupdf
+from PIL import Image, ImageChops
 
 from tarja import __version__
 from tarja.detectors import (  # noqa: F401
@@ -79,6 +80,21 @@ def already_covered(rects: list[pymupdf.Rect], previous: list[pymupdf.Rect]) -> 
         any((rect & other).get_area() >= 0.5 * rect.get_area() for other in previous)
         for rect in rects
     )
+
+
+def render_png(page: pymupdf.Page, dpi: int) -> bytes:
+    """PNG da página; sem cor, em tons de cinza, que ocupa cerca de metade do espaço.
+
+    Com R = G = B em todos os pixels a conversão não perde informação, e a tarja
+    continua preta. Páginas com qualquer cor permanecem em RGB.
+    """
+    pixmap = page.get_pixmap(dpi=dpi, colorspace=pymupdf.csRGB, alpha=False)
+    red, green, blue = Image.frombytes("RGB", (pixmap.width, pixmap.height), pixmap.samples).split()
+    neutral = (
+        ImageChops.difference(red, green).getbbox() is None
+        and ImageChops.difference(green, blue).getbbox() is None
+    )
+    return (pymupdf.Pixmap(pymupdf.csGRAY, pixmap) if neutral else pixmap).tobytes("png")
 
 
 def flatten_annotations(doc: pymupdf.Document) -> tuple[set[int], set[int]]:
@@ -192,9 +208,8 @@ def censor_pdf(
                     page.apply_redactions(images=2, graphics=0, text=0)
                 # Copia somente os pixels já censurados: não leva texto oculto,
                 # metadados, anexos, links ou revisões do documento original.
-                pixmap = page.get_pixmap(dpi=policy.dpi, colorspace=pymupdf.csRGB, alpha=False)
                 exported = result.new_page(width=page.rect.width, height=page.rect.height)
-                exported.insert_image(exported.rect, stream=pixmap.tobytes("png"))
+                exported.insert_image(exported.rect, stream=render_png(page, policy.dpi))
                 exported.set_rotation(rotation)
                 report.warnings = sorted(set(report.warnings))
                 reports.append(report)
