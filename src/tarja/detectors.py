@@ -1,6 +1,7 @@
 """Identificação por padrões e contexto com intervalos no texto original."""
 
 import re
+from bisect import bisect_right
 
 from tarja.models import ENTITIES, Candidate, Detection
 
@@ -92,6 +93,21 @@ LABEL_VALUE_PATTERNS = {
     )
     for entity in ENTITIES
 }
+# Rótulos combinados ("CPF e RG: X e Y"): cada valor da lista segue o rótulo na mesma posição.
+ANY_LABEL = rf"{START}(?:{'|'.join(LABELS[entity] for entity in ENTITIES)}){END}"
+NAMED_LABEL = re.compile(
+    rf"{START}(?:{'|'.join(f'(?P<{entity}>{LABELS[entity]})' for entity in ENTITIES)}){END}",
+    re.I,
+)
+COMBINED_LABELS = re.compile(
+    rf"{ANY_LABEL}(?:{SPACE}(?:[/,&]|e|ou){SPACE}{ANY_LABEL}){{1,3}}{TIGHT}", re.I
+)
+VALUE_JOIN = re.compile(rf"{SPACE}(?:[/,;&|]|{DASH}|e|ou){SPACE}", re.I)
+SHAPES = {
+    entity: re.compile(rf"(?:{value})(?![0-9])")
+    for entity, value in {"CPF": CPF_SHAPE, **CONTEXT_VALUES}.items()
+}
+REVIEW_TOKEN = re.compile(rf"[0-9](?:{SEP}[0-9OoIlSsBbGgZzq]){{3,24}}")
 EXCLUDED_LABEL = re.compile(r"(?:\btelefone|\bcelular|\bmatr[íi]cula|\bc/c|R\$)\s*[:\-]?\s*$", re.I)
 PUNCT_RE = re.compile(PUNCT)
 COMMA = re.compile(r"[,\uff0c]")
@@ -117,8 +133,31 @@ def is_standard_cpf(value: str) -> bool:
     return sum(c in DIGITS for c in value) == 11 and not any(c.isalpha() for c in value)
 
 
-def _overlaps(start: int, end: int, spans: list[tuple[int, int]]) -> bool:
-    return any(start < b and end > a for a, b in spans)
+class _Spans:
+    """Intervalos ordenados e sem sobreposição; consultas por busca binária.
+
+    Uma lista simples tornaria o custo quadrático no número de ocorrências, o que pesa
+    em arquivos de texto grandes.
+    """
+
+    def __init__(self, spans=()):
+        self.starts: list[int] = []
+        self.ends: list[int] = []
+        for start, end in spans:
+            self.add(start, end)
+
+    def overlaps(self, start: int, end: int) -> bool:
+        index = bisect_right(self.starts, start)
+        if index and self.ends[index - 1] > start:
+            return True
+        return index < len(self.starts) and self.starts[index] < end
+
+    def add(self, start: int, end: int) -> None:
+        """Ignora um intervalo que se sobreponha aos já registrados."""
+        if not self.overlaps(start, end):
+            index = bisect_right(self.starts, start)
+            self.starts.insert(index, start)
+            self.ends.insert(index, end)
 
 
 def _plausible_cpf(match: re.Match, labeled: bool) -> bool:
@@ -139,6 +178,59 @@ def _plausible_cpf(match: re.Match, labeled: bool) -> bool:
     return any(punctuated) or sum(map(bool, separators)) in (0, 3)
 
 
+def _combined_labels(
+    text: str,
+    entities: tuple[str, ...],
+    detections: list[Detection],
+    candidates: list[Candidate],
+    reserved: _Spans,
+) -> None:
+    """Lista de valores após rótulos combinados; o formato decide quando a ordem diverge."""
+    for match in COMBINED_LABELS.finditer(text):
+        labels = [m.lastgroup for m in NAMED_LABEL.finditer(text, match.start(), match.end())]
+        position = match.end()
+        for entity in labels:
+            fits = {}
+            for name in dict.fromkeys(labels):
+                shape = SHAPES[name].match(text, position)
+                if shape:
+                    fits[name] = shape.end()
+            if not fits:
+                token = REVIEW_TOKEN.match(text, position)
+                enabled = [e for e in (entity, *labels) if e in entities]
+                if (
+                    token
+                    and enabled
+                    and sum(c in DIGITS for c in token.group()) >= 6
+                    and not reserved.overlaps(*token.span())
+                ):
+                    candidates.append(Candidate(enabled[0], *token.span(), "unrecognized_value"))
+                break
+            # Mesma regra dos rótulos simples: só a CNH usa 11 dígitos sem pontuação.
+            plain_cnh = (
+                entity == "CNH"
+                and "CNH" in entities
+                and text[position : fits.get("CNH", position)].isdigit()
+            )
+            if "CPF" in fits and "CPF" in entities and not plain_cnh:
+                chosen = "CPF"
+            elif entity in fits:
+                # O valor tem o formato do seu rótulo: categoria não selecionada fica de fora.
+                chosen = entity if entity in entities else None
+            else:
+                chosen = next((e for e in labels if e in fits and e in entities), None)
+            end = fits[chosen] if chosen else max(fits.values())
+            if not reserved.overlaps(position, end):
+                if chosen:
+                    valid = cpf_checksum_valid(text[position:end]) if chosen == "CPF" else None
+                    detections.append(Detection(chosen, position, end, valid))
+                reserved.add(position, end)
+            join = VALUE_JOIN.match(text, end)
+            if not join:
+                break
+            position = join.end()
+
+
 def scan_identifiers(
     text: str, entities: tuple[str, ...] = ENTITIES
 ) -> tuple[list[Detection], list[Candidate]]:
@@ -150,11 +242,12 @@ def scan_identifiers(
     """
     detections: list[Detection] = []
     candidates: list[Candidate] = []
-    reserved = [m.span() for m in CNPJ_PATTERN.finditer(text)]
+    reserved = _Spans(m.span() for m in CNPJ_PATTERN.finditer(text))
+    _combined_labels(text, entities, detections, candidates, reserved)
     for entity, pattern in CONTEXT_PATTERNS:
         for match in pattern.finditer(text):
             start, end = match.span("value")
-            if _overlaps(start, end, reserved):
+            if reserved.overlaps(start, end):
                 continue
             value = match.group("value")
             cpf_like = bool(CPF_VALUE.fullmatch(value))
@@ -170,11 +263,11 @@ def scan_identifiers(
                 continue
             elif "CPF" in entities and cpf_like:
                 candidates.append(Candidate(entity, start, end, "entity_disabled"))
-            reserved.append((start, end))
+            reserved.add(start, end)
     if "CPF" in entities:
         for match in CPF_PATTERN.finditer(text):
             start, end = match.span("value")
-            if _overlaps(start, end, reserved):
+            if reserved.overlaps(start, end):
                 continue
             labeled = bool(CPF_LABEL_BEFORE.search(text[max(0, start - 20) : start]))
             if not _plausible_cpf(match, labeled):
@@ -185,21 +278,22 @@ def scan_identifiers(
                 candidates.append(Candidate("CPF", start, end, "excluded_label"))
                 continue
             detections.append(Detection("CPF", start, end, valid))
-            reserved.append((start, end))
+            reserved.add(start, end)
         for match in SHORT_CPF_PATTERN.finditer(text):
             start, end = match.span("value")
-            if not _overlaps(start, end, reserved):
+            if not reserved.overlaps(start, end):
                 valid = cpf_checksum_valid(match.group("value"))
                 detections.append(Detection("CPF", start, end, valid))
-                reserved.append((start, end))
+                reserved.add(start, end)
+    flagged = _Spans((c.start, c.end) for c in candidates)
     for entity in entities:
         for match in LABEL_VALUE_PATTERNS[entity].finditer(text):
             start, end = match.span("token")
             if sum(c in DIGITS for c in match.group("token")) < 6:
                 continue
-            known = reserved + [(c.start, c.end) for c in candidates]
-            if not _overlaps(start, end, known):
+            if not (reserved.overlaps(start, end) or flagged.overlaps(start, end)):
                 candidates.append(Candidate(entity, start, end, "unrecognized_value"))
+                flagged.add(start, end)
     return (
         sorted(detections, key=lambda item: item.start),
         sorted(candidates, key=lambda item: item.start),

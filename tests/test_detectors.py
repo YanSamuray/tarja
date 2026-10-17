@@ -178,6 +178,30 @@ def test_audit_numbers_are_neither_redacted_nor_flagged(text):
             ENTITIES,
             [("CPF", "123.456.789-00"), ("RG", "12.345.678-9")],
         ),
+        # Rótulos combinados: cada valor da lista segue o rótulo na mesma posição.
+        (
+            "CPF e RG: 123.456.789-00 e 12.345.678-9",
+            ENTITIES,
+            [("CPF", "123.456.789-00"), ("RG", "12.345.678-9")],
+        ),
+        (
+            "RG/CPF: 12.345.678-9 / 123.456.789-00",
+            ENTITIES,
+            [("RG", "12.345.678-9"), ("CPF", "123.456.789-00")],
+        ),
+        (
+            "CPF, RG e CNH: 123.456.789-00, 12.345.678-9 e 98765432100",
+            ENTITIES,
+            [("CPF", "123.456.789-00"), ("RG", "12.345.678-9"), ("CNH", "98765432100")],
+        ),
+        # Ordem dos valores diferente da dos rótulos: o formato decide.
+        (
+            "RG e CPF: 123.456.789-00 e 12.345.678-9",
+            ENTITIES,
+            [("CPF", "123.456.789-00"), ("RG", "12.345.678-9")],
+        ),
+        ("CPF e RG: 123.456.789-00 e 12.345.678-9", ("CPF",), [("CPF", "123.456.789-00")]),
+        ("CPF e RG: 123.456.789-00 e 12.345.678-9", ("RG",), [("RG", "12.345.678-9")]),
     ],
 )
 def test_classification_respects_selection_without_hiding_cpfs(text, entities, expected):
@@ -198,6 +222,15 @@ def test_unredacted_suspects_become_review_candidates(text, entities, expected):
     detections, candidates = scan_identifiers(text, entities)
     assert detections == []
     assert [(c.entity, c.reason, text[c.start : c.end]) for c in candidates] == [expected]
+
+
+def test_unrecognized_value_in_combined_list_is_flagged():
+    text = "CPF e RG: 123.456.789-00 e 1234567890123"
+    detections, candidates = scan_identifiers(text)
+    assert [(d.entity, text[d.start : d.end]) for d in detections] == [("CPF", "123.456.789-00")]
+    assert [(c.entity, c.reason, text[c.start : c.end]) for c in candidates] == [
+        ("RG", "unrecognized_value", "1234567890123")
+    ]
 
 
 def test_checksum_accepts_ocr_letters_and_lost_leading_zeros():

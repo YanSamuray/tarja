@@ -12,6 +12,8 @@
   - rótulo colado (`CPF123...`) e ênfase do Markdown (`_123..._`).
 - Páginas com texto convertido em curvas ou com fontes sem mapeamento Unicode passam a exigir OCR no modo `auto`; antes, o CPF exibido não era detectado.
 - Linhas de boleto deixam de ser censuradas como CPF.
+- Listas após rótulos combinados (`CPF e RG: X e Y`, `RG/CPF: X / Y`): cada valor segue o rótulo na mesma posição, e o formato decide quando a ordem diverge. Antes, só o primeiro valor era censurado.
+- Custo da detecção linear no número de ocorrências; antes era quadrático (20 mil linhas com identificadores: de 93 s para 2 s).
 
 ### Alterado
 
