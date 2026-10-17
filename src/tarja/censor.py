@@ -10,7 +10,12 @@ from time import perf_counter
 import pymupdf
 
 from tarja import __version__
-from tarja.detectors import detect_identifiers, mask_cpf_digits  # noqa: F401
+from tarja.detectors import (  # noqa: F401
+    detect_identifiers,
+    is_standard_cpf,
+    mask_cpf_digits,
+    scan_identifiers,
+)
 from tarja.models import Detection, DocumentReport, PageReport, Policy, ProcessingError
 from tarja.ocr import PageText, extract_page
 
@@ -20,14 +25,27 @@ def sha256(path: Path) -> str:
         return hashlib.file_digest(stream, "sha256").hexdigest()
 
 
+def partial_cpf(extracted: PageText, detection: Detection, policy: Policy) -> bool:
+    """A máscara parcial exige caixas de caracteres exatas e um CPF de 11 dígitos."""
+    return (
+        detection.entity == "CPF"
+        and policy.cpf_mode == "partial"
+        and not extracted.used_ocr
+        and is_standard_cpf(extracted.text[detection.start : detection.end])
+    )
+
+
 def redaction_rects(
     extracted: PageText, detection: Detection, policy: Policy
 ) -> list[pymupdf.Rect]:
     indices = [i for i in range(detection.start, detection.end) if extracted.boxes[i]]
-    partial = detection.entity == "CPF" and policy.cpf_mode == "partial" and not extracted.used_ocr
-    if partial:
+    if partial_cpf(extracted, detection, policy):
         digits = [i for i in indices if extracted.text[i] in "0123456789"]
         indices = digits[:3] + digits[-2:]
+    return span_rects(extracted, indices)
+
+
+def span_rects(extracted: PageText, indices: list[int]) -> list[pymupdf.Rect]:
     # Nunca procura substrings pela página: cada retângulo vem desta ocorrência.
     groups: list[list[int]] = []
     for index in indices:
@@ -53,6 +71,14 @@ def redaction_rects(
         if not rect.is_empty:
             rects.append(rect)
     return rects
+
+
+def already_covered(rects: list[pymupdf.Rect], previous: list[pymupdf.Rect]) -> bool:
+    """OCR e extração nativa podem achar a mesma ocorrência; conta-se uma vez."""
+    return all(
+        any((rect & other).get_area() >= 0.5 * rect.get_area() for other in previous)
+        for rect in rects
+    )
 
 
 def censor_pdf(
@@ -95,7 +121,7 @@ def censor_pdf(
                     report.warnings.append("no_text_detected")
                 if extracted.used_ocr:
                     report.warnings.append("ocr_requires_visual_review")
-                detections = detect_identifiers(extracted.text, policy.entities)
+                detections, candidates = scan_identifiers(extracted.text, policy.entities)
                 covered: list[pymupdf.Rect] = []
                 for detection in detections:
                     rects = redaction_rects(extracted, detection, policy)
@@ -103,23 +129,15 @@ def censor_pdf(
                         raise ProcessingError(
                             "Não foi possível localizar uma ocorrência na página."
                         )
-                    duplicate = all(
-                        any(
-                            (rect & previous).get_area() >= 0.5 * rect.get_area()
-                            for previous in covered
-                        )
-                        for rect in rects
-                    )
-                    if not duplicate:
+                    if not already_covered(rects, covered):
                         report.counts[detection.entity] = report.counts.get(detection.entity, 0) + 1
                     if detection.checksum_valid is False:
                         report.warnings.append("cpf_checksum_invalid_masked")
-                    if (
-                        extracted.used_ocr
-                        and detection.entity == "CPF"
-                        and policy.cpf_mode == "partial"
-                    ):
-                        report.warnings.append("ocr_cpf_expanded_to_full")
+                    if detection.entity == "CPF" and policy.cpf_mode == "partial":
+                        if extracted.used_ocr:
+                            report.warnings.append("ocr_cpf_expanded_to_full")
+                        elif not partial_cpf(extracted, detection, policy):
+                            report.warnings.append("cpf_irregular_expanded_to_full")
                     for rect in rects:
                         page.add_redact_annot(rect, fill=(0, 0, 0), cross_out=False)
                         report.regions.append(
@@ -129,6 +147,24 @@ def censor_pdf(
                             }
                         )
                     covered.extend(rects)
+                # Números suspeitos não censurados: só a posição, nunca o valor.
+                reviewed = list(covered)
+                for candidate in candidates:
+                    indices = range(candidate.start, candidate.end)
+                    rects = span_rects(extracted, [i for i in indices if extracted.boxes[i]])
+                    if not rects or already_covered(rects, reviewed):
+                        continue
+                    for rect in rects:
+                        report.candidates.append(
+                            {
+                                "entity": candidate.entity,
+                                "reason": candidate.reason,
+                                "bbox": [round(v, 2) for v in rect],
+                            }
+                        )
+                    reviewed.extend(rects)
+                if report.candidates:
+                    report.warnings.append("unredacted_candidates_require_review")
                 if detections:
                     page.apply_redactions(images=2, graphics=0, text=0)
                 # Copia somente os pixels já censurados: não leva texto oculto,

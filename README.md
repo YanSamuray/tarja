@@ -49,12 +49,14 @@ uv run tarja entrada.pdf saida.pdf --cpf-mode full
 
 | Identificador | Regra |
 | --- | --- |
-| CPF | Padrão de 11 dígitos, com ou sem separadores; máscara parcial dos primeiros 3 e últimos 2 dígitos, ou completa |
-| RG | Censura completa; exige rótulo como `RG` ou `registro geral`; cobertura limitada dos formatos históricos |
-| CNH | Censura completa de 11 dígitos precedidos do rótulo |
-| Título de eleitor | Censura completa de 12 dígitos precedidos do rótulo |
+| CPF | 11 dígitos, com ou sem separadores, inclusive travessões, espaços inseparáveis e uma quebra de linha; após rótulo de CPF, também 9 ou 10 dígitos (zeros à esquerda perdidos em planilhas); máscara parcial dos primeiros 3 e últimos 2 dígitos, ou completa |
+| RG | Censura completa; exige rótulo como `RG`, `R.G.`, `registro geral` ou `identidade`; aceita prefixo de UF (`MG-`); cobertura limitada dos formatos estaduais |
+| CNH | Censura completa de 11 dígitos precedidos de `CNH`, `carteira nacional de habilitação` ou `carteira de motorista` |
+| Título de eleitor | Censura completa de 12 dígitos precedidos de `título de eleitor`, `título eleitoral` ou `inscrição eleitoral` |
 
-CPFs com dígitos verificadores inválidos também são censurados e sinalizados, pois podem resultar de erro de digitação ou OCR. CNPJ e alguns contextos ambíguos são filtrados. Nomes, endereços, telefones, e-mails, rostos, assinaturas e códigos QR não são detectados nesta versão.
+Na dúvida, o número é censurado. CPFs com dígitos verificadores inválidos também são censurados e sinalizados, pois podem resultar de erro de digitação ou OCR. Um valor com formato de CPF é tratado como CPF mesmo sob os rótulos `CPF/CNPJ`, `RG` (a Carteira de Identidade Nacional usa o CPF como número) ou `CNH`, quando formatado. CPFs fora do padrão de 11 dígitos, como os com zeros perdidos ou letras trocadas pelo OCR (`O` por `0`), recebem censura completa mesmo na política parcial. Em rótulos combinados, como `CPF e RG: X e Y`, cada valor segue o rótulo na mesma posição; se a ordem divergir, o formato do número decide.
+
+CNPJ, valores monetários (`123.456.789,00`) e linhas de boleto não são censurados. Após rótulos de telefone, celular, matrícula, conta (`c/c`) ou `R$`, um número com formato de CPF só fica sem censura quando o DV é inválido, e mesmo assim entra no relatório como ponto para conferência. Nomes, endereços, telefones, e-mails, rostos, assinaturas e códigos QR não são detectados nesta versão.
 
 ## Formatos de entrada e saída
 
@@ -73,7 +75,7 @@ uv run tarja imagem.png imagem-censurada.pdf --todos --tessdata .runtime/tessdat
 uv run tarja documento.docx documento-censurado.pdf --rg --cnh
 ```
 
-Não há exportação para DOCX editável, censura de planilhas ou apresentações nesta versão. A integração real com LibreOffice não foi executada neste ambiente; consulte as [evidências de validação](docs/validacao.md).
+Não há exportação para DOCX editável, censura de planilhas ou apresentações nesta versão. A integração real com LibreOffice é executada no CI em Linux; no Windows local ela não foi executada. Consulte as [evidências de validação](docs/validacao.md).
 
 ## Processar pastas
 
@@ -96,8 +98,8 @@ Baixe os modelos `por.traineddata` e `eng.traineddata` do [repositório oficial 
 uv run tarja entrada.pdf saida.pdf --tessdata .runtime/tessdata --todos
 ```
 
-- `--ocr auto`: usa OCR em páginas com imagens, mesmo com texto digital; também em páginas sem texto com desenhos.
-- `--ocr always`: força OCR em todas as páginas, útil para texto em curvas ou camadas defeituosas.
+- `--ocr auto`: usa OCR em páginas com imagens, mesmo com texto digital; em páginas sem texto com desenhos; em páginas com texto convertido em curvas; e em páginas com fontes sem mapeamento Unicode, cujo texto extraído não corresponde ao exibido.
+- `--ocr always`: força OCR em todas as páginas, útil para camadas de texto defeituosas que escapem a esses critérios.
 - `--ocr never`: recusa imagens e PDFs que exijam OCR; não os exporta silenciosamente sem inspeção.
 - `--language por+eng`: idiomas dos modelos disponíveis.
 - `--dpi 300`: resolução de OCR/exportação, de 150 a 600 DPI.
@@ -124,7 +126,15 @@ TXT e MD têm os caracteres dos valores selecionados substituídos por `*`, sem 
 
 ## Relatórios
 
-Cada execução grava `report-<id>.json` na saída. Inclui versão do esquema, política, hashes de entrada/saída, formato, duração, contagens, regiões e avisos. Não contém os valores encontrados, texto extraído nem nomes dos arquivos de entrada. A numeração segue a ordem do lote, e o hash permite identificar o original.
+Cada execução grava `report-<id>.json` na saída. Inclui versão do esquema (atualmente 3), política, hashes de entrada/saída, formato, duração, contagens, regiões, pontos para conferência e avisos. Não contém os valores encontrados, texto extraído nem nomes dos arquivos de entrada. A numeração segue a ordem do lote, e o hash permite identificar o original.
+
+Os pontos para conferência (`candidates`) indicam números suspeitos que **não** foram censurados, para orientar a revisão:
+
+- `excluded_label`: formato de CPF após rótulo de telefone, matrícula ou similar, com DV inválido;
+- `entity_disabled`: número com formato de CPF classificado como uma categoria não selecionada, como a CNH;
+- `unrecognized_value`: rótulo seguido de um valor não reconhecido, como um CPF com dígitos a mais ou ilegível no OCR.
+
+Cada ponto traz somente a categoria, o motivo e a posição. O console informa quantos pontos há em cada arquivo.
 
 PDFs usam coordenadas por página. TXT/MD usam uma unidade lógica de texto e intervalos de caracteres, contados após a remoção do BOM. Os status são `requires_review` ou `failed`; não existe aprovação automática para compartilhamento.
 

@@ -26,8 +26,8 @@ Os adaptadores de imagem e Office usam diretórios temporários com escopo limit
 ## Módulos
 
 - `models.py`: política, entidades, relatórios e erros controlados.
-- `detectors.py`: padrões, intervalos, contexto e validação de CPF.
-- `ocr.py`: extração e correspondência entre texto e caixas de caracteres.
+- `detectors.py`: padrões, intervalos, contexto, validação de CPF e pontos para conferência.
+- `ocr.py`: extração, correspondência entre texto e caixas de caracteres e critérios que exigem OCR.
 - `censor.py`: censura e geração de PDF estático.
 - `formats/text.py`: substituição por intervalos em TXT/MD.
 - `formats/images.py`: orientação EXIF, transparência, múltiplos quadros e normalização de imagem.
@@ -52,11 +52,27 @@ DOCX, ODT e RTF dependem de [conversão pelo LibreOffice](https://help.libreoffi
 | `cpf_checksum_invalid_masked` | Número com aparência de CPF e DV inválido; foi censurado mesmo assim |
 | `ocr_requires_visual_review` | Reconhecimento por OCR necessita conferência |
 | `ocr_cpf_expanded_to_full` | A política parcial foi ampliada para remoção completa em página OCR |
+| `cpf_irregular_expanded_to_full` | A política parcial foi ampliada para remoção completa em CPF fora do padrão de 11 dígitos, como zeros perdidos ou letras de OCR |
+| `unredacted_candidates_require_review` | A página tem pontos para conferência: números suspeitos que não foram censurados |
 | `no_text_detected` | Página sem texto extraído; confira se está vazia |
 | `office_conversion_requires_layout_review` | A conversão Office pode modificar a apresentação |
 | `markdown_linked_content_not_processed` | Conteúdo externo e mídias referenciadas não foram processados |
 
-As regiões do relatório não contêm valores pessoais. Coordenadas PDF são relativas à página sem rotação; a rotação visual é preservada na saída. Intervalos em TXT/MD são posições de caracteres no texto decodificado, sem BOM. Esse formato pode alimentar uma futura interface de revisão, sem alterar o núcleo.
+As regiões e os pontos para conferência do relatório não contêm valores pessoais. Coordenadas PDF são relativas à página sem rotação; a rotação visual é preservada na saída. Intervalos em TXT/MD são posições de caracteres no texto decodificado, sem BOM; a substituição preserva o comprimento, então valem também na saída. Esse formato pode alimentar uma futura interface de revisão, sem alterar o núcleo.
+
+## Critérios de detecção
+
+A detecção prefere censurar a mais. Um valor com formato de CPF é CPF mesmo sob rótulo de RG, pois a Carteira de Identidade Nacional usa o CPF como número, ou de CNH formatada. Só a CNH usa 11 dígitos sem pontuação. Quando a CNH não está selecionada, esse número fica visível apenas se o rótulo estiver colado ao valor e não for combinado com CPF (`CPF/CNH`); mesmo assim, entra como ponto para conferência.
+
+Os filtros de falso positivo cobrem formas que não costumam ser CPF:
+
+- valores monetários, como `123.456.789,00` e `123,456,789.00`;
+- separação parcial só com espaços, como em linhas de boleto;
+- números após rótulos de telefone, celular, matrícula, conta ou `R$`, mas apenas quando o DV é inválido.
+
+Um rótulo de CPF logo antes desativa os dois primeiros filtros. Os padrões aceitam espaços Unicode e invisíveis, traços, pontos médios e vírgulas como separadores, com no máximo uma quebra de linha, e usam quantificadores possessivos para evitar retrocesso exponencial.
+
+No modo `auto`, o OCR também é exigido em páginas com mais de 60 segmentos de retas e curvas preenchidos, sinal de texto convertido em curvas. Retângulos de tabelas e gráficos de barras não contam. O mesmo vale para páginas com três ou mais caracteres de substituição ou de controle, sinal de fonte sem mapeamento Unicode.
 
 ## Adicionar um formato
 

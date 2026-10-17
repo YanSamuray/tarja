@@ -34,12 +34,23 @@ class Detection:
     checksum_valid: bool | None = None
 
 
+@dataclass(frozen=True)
+class Candidate:
+    """Número suspeito que não foi censurado; o relatório indica onde conferir."""
+
+    entity: str
+    start: int
+    end: int
+    reason: str
+
+
 @dataclass
 class PageReport:
     page: int
     extraction: str
     counts: dict[str, int] = field(default_factory=dict)
     regions: list[dict] = field(default_factory=list)
+    candidates: list[dict] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
 
 

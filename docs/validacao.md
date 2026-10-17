@@ -43,3 +43,16 @@ Os testes e exemplos usam conteúdo sintético. Não foram processados documento
 ## Publicação e CI
 
 O projeto foi publicado em [YanSamuray/tarja](https://github.com/YanSamuray/tarja), sob AGPL-3.0-only. A [execução inicial do GitHub Actions](https://github.com/YanSamuray/tarja/actions/runs/35340615730), referente ao commit `ad73c7c`, concluiu com sucesso em Windows e Linux com Python 3.14: instalação pelo lock, Ruff, testes, build e inspeção dos artefatos. O workflow não instala modelos de OCR nem LibreOffice; os testes que dependem dessas ferramentas seguem as condições de disponibilidade descritas acima. A validação de OCR real relatada nesta página foi executada localmente.
+
+## Alterações não publicadas (branch `melhoria/deteccao`)
+
+Registro de 17/10/2026, posterior à versão 0.3.0. Escopo: correção de lacunas de detecção, pontos para conferência no relatório e CI com as ferramentas reais.
+
+- Localmente, no Windows com CPython 3.14.2: **150 testes aprovados com OCR real; 1 pulado**, a conversão real de DOCX, pois o LibreOffice não está instalado nesta máquina. Sem `TEST_TESSDATA`: 139 aprovados e 12 pulados.
+- O workflow passou a baixar os modelos `tessdata_fast` 4.1.0, conferidos pelos SHA-256 acima, e a instalar o LibreOffice no Linux.
+- Na [execução 39002493922 do GitHub Actions](https://github.com/YanSamuray/tarja/actions/runs/39002493922), commit `81583ee`, com CPython 3.14.8:
+  - **Linux: 151 testes aprovados, nenhum pulado.** É a primeira execução real da conversão DOCX → PDF pelo LibreOffice, seguida da censura; o adaptador Office está validado de ponta a ponta nesse ambiente.
+  - Windows: 150 aprovados e 1 pulado, o mesmo teste do LibreOffice, que o workflow não instala no Windows.
+- Ruff, build e inspeção dos artefatos aprovados nos dois sistemas.
+
+Os testes continuam sintéticos: não foram processados documentos reais nem medidas precisão, falsos negativos ou HH poupadas.

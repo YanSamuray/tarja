@@ -16,6 +16,24 @@ jobs:
       - run: uv sync --locked
       - run: uv run ruff check .
       - run: uv run ruff format --check .
+      - name: Modelos de OCR (tessdata_fast 4.1.0, conferidos por SHA-256)
+        shell: bash
+        run: |
+          mkdir -p .runtime/tessdata
+          base=https://raw.githubusercontent.com/tesseract-ocr/tessdata_fast/4.1.0
+          for model in por eng; do
+            curl -fsSL --retry 3 -o ".runtime/tessdata/$model.traineddata" "$base/$model.traineddata"
+          done
+          sha256sum -c - <<'EOF'
+          c4932b937207a9514b7514d518b931a99938c02a28a5a5a553f8599ed58b7deb  .runtime/tessdata/por.traineddata
+          7d4322bd2a7749724879683fc3912cb542f19906c83bcc1a52132556427170b2  .runtime/tessdata/eng.traineddata
+          EOF
+          echo "TEST_TESSDATA=${{ github.workspace }}/.runtime/tessdata" >> "$GITHUB_ENV"
+      - name: LibreOffice para a integração real com DOCX
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libreoffice-writer fonts-dejavu-core
       - run: uv run pytest
       - run: uv build
       - run: uv run python scripts/check_distribution.py
