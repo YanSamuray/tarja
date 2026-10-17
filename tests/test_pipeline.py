@@ -165,7 +165,7 @@ def test_rotated_page_and_full_cpf_mode(pdf, tmp_path):
         assert doc[0].rect.width == 260
 
 
-def test_form_is_not_silently_flattened(tmp_path):
+def test_form_fields_and_annotations_are_flattened_before_redaction(tmp_path):
     source, target = tmp_path / "form.pdf", tmp_path / "out.pdf"
     with pymupdf.open() as doc:
         page = doc.new_page()
@@ -175,8 +175,36 @@ def test_form_is_not_silently_flattened(tmp_path):
         widget.field_value = "12345678900"
         widget.rect = pymupdf.Rect(30, 30, 200, 60)
         page.add_widget(widget)
+        page.add_freetext_annot(pymupdf.Rect(30, 100, 300, 130), "CPF: 987.654.321-00")
         doc.save(source)
-    with pytest.raises(ProcessingError, match="formulários"):
+    report = censor_pdf(source, target, Policy(cpf_mode="full", dpi=150))
+    assert report.pages[0].counts == {"CPF": 2}
+    assert "annotations_flattened" in report.pages[0].warnings
+    # Incorporados à página, o campo e a anotação ficam sob a tarja, e não por cima dela.
+    assert_black_at_regions(target, report, 150)
+
+
+def test_pending_redaction_marks_are_applied(tmp_path):
+    source, target = tmp_path / "marked.pdf", tmp_path / "out.pdf"
+    with pymupdf.open() as doc:
+        page = doc.new_page()
+        page.insert_text((30, 60), "Nome: Fulano de Tal", fontsize=12)
+        page.add_redact_annot(pymupdf.Rect(70, 45, 200, 65), fill=(0, 0, 0))
+        doc.save(source)
+    report = censor_pdf(source, target, Policy(dpi=150))
+    assert report.pages[0].warnings == ["existing_redactions_applied"]
+    with pymupdf.open(target) as doc:
+        image = pymupdf.Pixmap(doc, doc[0].get_images()[0][0])
+        assert image.pixel(round(135 * 150 / 72), round(55 * 150 / 72))[:3] == (0, 0, 0)
+
+
+def test_xfa_form_is_refused(tmp_path):
+    source, target = tmp_path / "xfa.pdf", tmp_path / "out.pdf"
+    with pymupdf.open() as doc:
+        doc.new_page().insert_text((30, 60), "Formulario dinamico")
+        doc.xref_set_key(doc.pdf_catalog(), "AcroForm", "<< /Fields [] /XFA (template) >>")
+        doc.save(source)
+    with pytest.raises(ProcessingError, match="XFA"):
         censor_pdf(source, target)
     assert not target.exists()
 

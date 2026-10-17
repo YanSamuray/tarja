@@ -81,6 +81,24 @@ def already_covered(rects: list[pymupdf.Rect], previous: list[pymupdf.Rect]) -> 
     )
 
 
+def flatten_annotations(doc: pymupdf.Document) -> tuple[set[int], set[int]]:
+    """Aplica tarjas pendentes e incorpora campos e anotações visíveis ao conteúdo.
+
+    Sem isso, o valor de um campo seria desenhado por cima da tarja na página exportada,
+    e uma tarja marcada por outra pessoa, mas não aplicada, deixaria o texto visível.
+    """
+    pending, flattened = set(), set()
+    for page in doc:
+        if any(True for _ in page.annots(types=[pymupdf.PDF_ANNOT_REDACT])):
+            page.apply_redactions(images=2, graphics=0, text=0)
+            pending.add(page.number)
+        if page.first_annot or page.first_widget:
+            flattened.add(page.number)
+    if flattened:
+        doc.bake(annots=True, widgets=True)
+    return pending, flattened
+
+
 def censor_pdf(
     input_pdf_path: str | Path,
     output_pdf_path: str | Path,
@@ -107,16 +125,21 @@ def censor_pdf(
                 raise ProcessingError("PDF criptografado ou inválido; forneça uma cópia acessível.")
             if not 1 <= len(original) <= 300:
                 raise ProcessingError("O PDF deve conter de 1 a 300 páginas.")
+            if original.xref_get_key(original.pdf_catalog(), "AcroForm/XFA")[0] != "null":
+                raise ProcessingError(
+                    "Formulário XFA não é exibido corretamente: "
+                    "exporte uma cópia estática antes de processar."
+                )
+            pending, flattened = flatten_annotations(original)
             for page in original:
-                if list(page.widgets() or []) or list(page.annots() or []):
-                    raise ProcessingError(
-                        "PDF com formulários ou anotações: "
-                        "exporte uma cópia estática antes de processar."
-                    )
                 rotation = page.rotation
                 page.set_rotation(0)
                 extracted = extract_page(page, policy)
                 report = PageReport(page.number + 1, "ocr" if extracted.used_ocr else "native")
+                if page.number in pending:
+                    report.warnings.append("existing_redactions_applied")
+                if page.number in flattened:
+                    report.warnings.append("annotations_flattened")
                 if not extracted.text.strip():
                     report.warnings.append("no_text_detected")
                 if extracted.used_ocr:
