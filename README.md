@@ -4,7 +4,7 @@
 
 O Tarja nasceu para reduzir o trabalho manual de ocultação de documentos pessoais realizado por auditores fiscais e consultores. Busca os identificadores selecionados, aplica a censura e gera um relatório para revisão, preservando o arquivo original.
 
-Versão atual: **0.3.0**. Requer **Python >=3.14** e utiliza **uv** para ambiente, dependências e execução. A versão testada localmente é Python 3.14.2. O nome da distribuição Python é `tarja-documentos`; o comando e o pacote são `tarja`.
+Versão atual: **0.3.0**. Requer **Python >=3.11**, testado de 3.11 a 3.14, e utiliza **uv** para ambiente, dependências e execução. O nome da distribuição Python é `tarja-documentos`; o comando e o pacote são `tarja`.
 
 ## Começar
 
@@ -19,7 +19,7 @@ uv run tarja --help
 uv run tarja --formats
 ```
 
-O arquivo `.python-version` seleciona a série 3.14. O `pyproject.toml` estabelece o mínimo >=3.14, e `uv.lock` registra as versões resolvidas das dependências. Não é necessário ativar o ambiente virtual manualmente. Para instalar somente as dependências de execução, use `uv sync --locked --no-dev`.
+O arquivo `.python-version` seleciona a série 3.14 para desenvolvimento; para outra versão instalada, use `uv sync --python 3.11`. O `pyproject.toml` estabelece o mínimo >=3.11, e `uv.lock` registra as versões resolvidas das dependências. Não é necessário ativar o ambiente virtual manualmente. Para instalar somente as dependências de execução, use `uv sync --locked --no-dev`.
 
 ## Escolher os documentos pessoais
 
@@ -186,7 +186,7 @@ examples/            Demonstração com dados fictícios
 scripts/             Verificação dos artefatos de distribuição
 archive/             Histórico preservado apenas localmente, fora do Git
 data/                Entradas e saídas locais, fora do versionamento
-.github/workflows/   CI para Python 3.14 em Windows e Linux
+.github/workflows/   CI para Python 3.11 a 3.14 em Linux, e 3.11 e 3.14 em Windows
 .python-version      Série Python usada pelo uv
 pyproject.toml       Metadados e dependências
 uv.lock              Versões resolvidas
