@@ -120,9 +120,11 @@ A conversão ocorre sem interface gráfica, em um perfil temporário separado, c
 
 PDFs são reconstruídos a partir das imagens das páginas **já censuradas**. A tarja não é uma anotação removível que revele o texto original. A saída não leva texto oculto, metadados originais, anexos ou revisões do PDF. Essa escolha perde pesquisa, seleção de texto, acessibilidade semântica e assinaturas digitais, e pode aumentar o tamanho do arquivo.
 
+Campos de formulário e anotações visíveis, como comentários em caixa de texto e carimbos, são incorporados à página antes da censura. Assim seus valores também são procurados e ficam sob a tarja, e não por cima dela. Campos e anotações ocultos não são exibidos e não chegam à saída. Tarjas que alguém marcou no PDF, mas não aplicou, são aplicadas antes da busca. Os dois casos aparecem nos avisos do relatório.
+
 TXT e MD têm os caracteres dos valores selecionados substituídos por `*`, sem armazenar o texto anterior no resultado. A saída é UTF-8 sem BOM, preservando as quebras de linha existentes. Mídias referenciadas por Markdown continuam fora do escopo.
 
-**Todo resultado exige revisão humana.** A remoção das ocorrências encontradas não prova que todas as informações pessoais foram detectadas. CPF parcialmente censurado não torna o documento anônimo. Limites: 100 MB por entrada, até 300 páginas/quadros; PDFs criptografados, com formulários ou anotações requerem preparação manual.
+**Todo resultado exige revisão humana.** A remoção das ocorrências encontradas não prova que todas as informações pessoais foram detectadas. CPF parcialmente censurado não torna o documento anônimo. Limites: 100 MB por entrada, até 300 páginas/quadros; PDFs criptografados e formulários XFA (dinâmicos) requerem preparação manual.
 
 ## Relatórios
 

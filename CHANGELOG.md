@@ -17,6 +17,7 @@
 
 ### Alterado
 
+- PDFs com campos de formulário ou anotações deixam de ser recusados: esses elementos são incorporados à página antes da censura (aviso `annotations_flattened`). Tarjas marcadas e não aplicadas são aplicadas antes da busca (aviso `existing_redactions_applied`). Formulários XFA continuam recusados.
 - Novos rótulos:
   - RG: `R.G.`, `identidade`, prefixo de UF;
   - CNH: `carteira nacional de habilitação`, `carteira de motorista`;

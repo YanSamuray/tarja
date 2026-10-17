@@ -41,6 +41,8 @@ O motor de construção é Hatchling, com pacote explicitamente selecionado em `
 
 PDFs e imagens resultam em PDF estático. Não há modo de PDF pesquisável implementado. Os metadados, imagens e streams do original não são anexados; cada página é renderizada após a censura e colocada num documento novo.
 
+Campos de formulário e anotações são desenhados acima do conteúdo da página. Por isso, antes da extração, `flatten_annotations` os incorpora ao conteúdo (`Document.bake`). Caso contrário, o valor de um campo apareceria por cima da tarja na imagem exportada. Tarjas marcadas e não aplicadas são aplicadas antes do `bake`, pois só incorporá-las deixaria visível o texto que alguém pretendia ocultar. Elementos ocultos não são desenhados e não chegam à saída. Formulários XFA continuam recusados, porque o MuPDF não exibe seu conteúdo dinâmico.
+
 TXT/MD usam UTF-8, aceitando BOM na entrada. O texto é tratado como texto literal, sem renderização de HTML/Markdown, execução de conteúdo ou acesso aos links. Caracteres alfanuméricos dos valores completos são substituídos por asteriscos; CPF parcial preserva os seis dígitos centrais. As mídias referenciadas pelo Markdown não são censuradas.
 
 DOCX, ODT e RTF dependem de [conversão pelo LibreOffice](https://help.libreoffice.org/latest/en-US/text/shared/guide/start_parameters.html). A saída não é um documento editável no formato original. A renderização depende das fontes e da versão do LibreOffice. A inspeção de layout é obrigatória e aparece no relatório. A configuração do perfil temporário eleva a segurança de macros; o adaptador não é uma sandbox para arquivos hostis.
@@ -54,6 +56,8 @@ DOCX, ODT e RTF dependem de [conversão pelo LibreOffice](https://help.libreoffi
 | `ocr_cpf_expanded_to_full` | A política parcial foi ampliada para remoção completa em página OCR |
 | `cpf_irregular_expanded_to_full` | A política parcial foi ampliada para remoção completa em CPF fora do padrão de 11 dígitos, como zeros perdidos ou letras de OCR |
 | `unredacted_candidates_require_review` | A página tem pontos para conferência: números suspeitos que não foram censurados |
+| `annotations_flattened` | Campos de formulário e anotações visíveis foram incorporados à página antes da censura; confira a aparência |
+| `existing_redactions_applied` | Tarjas já marcadas no PDF, mas não aplicadas, foram aplicadas antes da busca |
 | `no_text_detected` | Página sem texto extraído; confira se está vazia |
 | `office_conversion_requires_layout_review` | A conversão Office pode modificar a apresentação |
 | `markdown_linked_content_not_processed` | Conteúdo externo e mídias referenciadas não foram processados |
