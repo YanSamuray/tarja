@@ -1,5 +1,11 @@
 # Alterações
 
+## Não publicado
+
+### Corrigido
+
+- Páginas digitalizadas gravadas de lado e exibidas em pé pela rotação do PDF (90, 180 ou 270 graus), como fazem scanners e aplicativos de celular: o OCR recebia a imagem deitada, e o CPF ficava visível sem nenhum ponto para conferência. O OCR passa a ler a página como é exibida. Em 90 e 270 graus também se evita um recorte do PyMuPDF que descartava parte do texto reconhecido.
+
 ## 0.4.0 - 2026-10-17
 
 ### Corrigido

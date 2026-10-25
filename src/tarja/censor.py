@@ -149,8 +149,10 @@ def censor_pdf(
             pending, flattened = flatten_annotations(original)
             for page in original:
                 rotation = page.rotation
-                page.set_rotation(0)
+                # O OCR precisa da página em pé, como é exibida; as caixas, nativas ou
+                # de OCR, já vêm em coordenadas sem rotação, que valem para as tarjas.
                 extracted = extract_page(page, policy)
+                page.set_rotation(0)
                 report = PageReport(page.number + 1, "ocr" if extracted.used_ocr else "native")
                 if page.number in pending:
                     report.warnings.append("existing_redactions_applied")

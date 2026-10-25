@@ -48,29 +48,50 @@ def has_vector_outlines(page: pymupdf.Page) -> bool:
     return False
 
 
+def ocr_blocks(page: pymupdf.Page, policy: Policy) -> list[dict]:
+    """OCR da página em pé, como é exibida, com caixas convertidas para a página sem rotação.
+
+    O get_textpage_ocr do PyMuPDF faz essa conversão, mas recorta o texto pelo retângulo
+    da página em pé: com rotação de 90 ou 270 graus, parte da página ficava sem OCR.
+    """
+    pixmap = page.get_pixmap(dpi=policy.dpi)
+    stream = pixmap.pdfocr_tobytes(
+        language=policy.language, tessdata=pymupdf.get_tessdata(policy.tessdata)
+    )
+    with pymupdf.open(stream=stream) as ocr:
+        zoom = page.rect.width / ocr[0].rect.width
+        textpage = ocr[0].get_textpage(flags=0, matrix=pymupdf.Matrix(zoom, zoom))
+        # Ordenado em pé, na ordem de leitura; só depois as caixas giram.
+        blocks = textpage.extractRAWDICT(sort=True)["blocks"]
+    derotation = page.derotation_matrix
+    for block in blocks:
+        for line in block.get("lines", ()):
+            for span in line["spans"]:
+                for char in span["chars"]:
+                    char["bbox"] = tuple(pymupdf.Rect(char["bbox"]) * derotation)
+    return blocks
+
+
 def extract_page(page: pymupdf.Page, policy: Policy) -> PageText:
+    """Texto e caixas sem rotação; chamar antes de zerar a rotação da página."""
     needs_ocr = requires_ocr(page)
     if needs_ocr and policy.ocr == "never":
         raise ProcessingError("Página com conteúdo visual exige OCR; nenhum PDF foi exportado.")
     use_ocr = policy.ocr == "always" or needs_ocr
-    kwargs = {}
+    blocks = []
     if use_ocr:
         try:
-            kwargs["textpage"] = page.get_textpage_ocr(
-                language=policy.language, dpi=policy.dpi, full=True, tessdata=policy.tessdata
-            )
+            blocks = ocr_blocks(page, policy)
         except Exception:
             raise ProcessingError(
                 "OCR indisponível. Configure --tessdata com os modelos por e eng do Tesseract."
             ) from None
-    raw = page.get_text("rawdict", sort=True, **kwargs)
-    if use_ocr:
-        # Mantém também a extração nativa: uma leitura OCR pior não deve fazer
-        # desaparecer uma ocorrência digital válida. O exportador deduplica por região.
-        raw["blocks"].extend(page.get_text("rawdict", sort=True)["blocks"])
+    # Mantém também a extração nativa: uma leitura OCR pior não deve fazer
+    # desaparecer uma ocorrência digital válida. O exportador deduplica por região.
+    blocks.extend(page.get_text("rawdict", sort=True)["blocks"])
     text, boxes, lines = [], [], []
     line_number = 0
-    for block in raw["blocks"]:
+    for block in blocks:
         if block.get("type") != 0:
             continue
         for line in block["lines"]:
