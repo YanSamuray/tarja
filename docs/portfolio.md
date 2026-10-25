@@ -2,7 +2,7 @@
 
 ## Apresentação curta
 
-Desenvolvi o Tarja, uma ferramenta em Python para automatizar a ocultação de identificadores pessoais em documentos. O projeto nasceu de uma necessidade operacional: auditores fiscais e consultores realizavam essa tarefa manualmente em PDFs, consumindo tempo especializado. Segundo a experiência relatada pelo autor, a automação reduziu de forma relevante esse trabalho. Na reconstrução, separei as regras de detecção da manipulação de PDF, corrigi a localização das ocorrências, introduzi OCR por página e testes de regressão, e acrescentei um relatório para apoiar a revisão humana. A versão 0.3 usa Python 3.14 e uv, permite habilitar categorias por flags e acrescenta imagens, texto e uma integração opcional com LibreOffice.
+Desenvolvi o Tarja, uma ferramenta em Python para automatizar a ocultação de identificadores pessoais em documentos. O projeto nasceu de uma necessidade operacional: auditores fiscais e consultores realizavam essa tarefa manualmente em PDFs, consumindo tempo especializado. Segundo a experiência relatada pelo autor, a automação reduziu de forma relevante esse trabalho. Na reconstrução, separei as regras de detecção da manipulação de PDF, corrigi a localização das ocorrências, introduzi OCR por página e testes de regressão, e acrescentei um relatório para apoiar a revisão humana. A versão 0.3 adotou o uv, a seleção de categorias por flags e a entrada de imagens, texto e documentos Office via LibreOffice. A 0.4 fechou lacunas de detecção encontradas em revisão técnica, passou a apontar no relatório os números suspeitos que não foram censurados e ampliou a compatibilidade para Python 3.11 ou superior.
 
 ## Problema e contribuição
 

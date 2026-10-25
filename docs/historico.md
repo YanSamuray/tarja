@@ -4,6 +4,8 @@ O projeto começou como scripts para censura de CPF em PDFs. Uma segunda tentati
 
 A reconstrução 0.2 separou detecção, extração e remoção, corrigiu a busca global de fragmentos numéricos e o tratamento de PDFs mistos, e introduziu relatórios e testes sintéticos. A versão 0.3 adotou o nome Tarja, Python 3.14, uv, layout `src/`, seleção de categorias e adaptadores para outros formatos.
 
+A versão 0.4 fechou lacunas de detecção encontradas em revisão técnica, como rótulos combinados, a Carteira de Identidade Nacional e separadores tipográficos. O relatório passou a apontar os números suspeitos que não foram censurados. Formulários e anotações passaram a ser incorporados à página antes da censura, e páginas sem cor passaram a ser exportadas em tons de cinza. O Python mínimo baixou para 3.11, e o CI passou a executar OCR real e a conversão pelo LibreOffice.
+
 As versões anteriores foram preservadas localmente em `archive/`. O repositório público contém somente a versão ativa, sua documentação, testes e geradores de exemplos fictícios. Os arquivos históricos, documentos de entrada, resultados, modelos de OCR e ambientes virtuais não são publicados.
 
 Consulte [CHANGELOG.md](../CHANGELOG.md) para as alterações da versão atual e [arquitetura.md](arquitetura.md) para as decisões técnicas.
