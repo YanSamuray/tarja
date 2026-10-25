@@ -1,4 +1,4 @@
-# Arquitetura e formatos do Tarja 0.3
+# Arquitetura e formatos do Tarja
 
 ## Fluxo
 

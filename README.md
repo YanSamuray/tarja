@@ -190,6 +190,7 @@ data/                Entradas e saídas locais, fora do versionamento
 .python-version      Série Python usada pelo uv
 pyproject.toml       Metadados e dependências
 uv.lock              Versões resolvidas
+CLAUDE.md            Orientações para sessões do Claude Code
 ```
 
 `archive/` não é publicado e não participa dos testes, da análise de código ou da distribuição Python. `.venv/`, `.cache/`, `.runtime/` e `output/` são diretórios locais gerados, também fora do versionamento. O `.gitignore` também bloqueia documentos e imagens soltos; os exemplos públicos são gerados por código com conteúdo fictício. O layout `src/` permite testar o pacote instalado e evita misturá-lo com o histórico.
