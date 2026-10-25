@@ -62,7 +62,7 @@ DOCX, ODT e RTF dependem de [conversão pelo LibreOffice](https://help.libreoffi
 | `office_conversion_requires_layout_review` | A conversão Office pode modificar a apresentação |
 | `markdown_linked_content_not_processed` | Conteúdo externo e mídias referenciadas não foram processados |
 
-As regiões e os pontos para conferência do relatório não contêm valores pessoais. Coordenadas PDF são relativas à página sem rotação; a rotação visual é preservada na saída. Intervalos em TXT/MD são posições de caracteres no texto decodificado, sem BOM; a substituição preserva o comprimento, então valem também na saída. Esse formato pode alimentar uma futura interface de revisão, sem alterar o núcleo.
+As regiões e os pontos para conferência do relatório não contêm valores pessoais. Coordenadas PDF são relativas à página sem rotação; a rotação visual é preservada na saída. O OCR lê a página em pé, como é exibida, e só então as caixas são convertidas para a página sem rotação. Intervalos em TXT/MD são posições de caracteres no texto decodificado, sem BOM; a substituição preserva o comprimento, então valem também na saída. Esse formato pode alimentar uma futura interface de revisão, sem alterar o núcleo.
 
 ## Critérios de detecção
 

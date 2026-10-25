@@ -364,6 +364,51 @@ def test_real_ocr_redacts_text_drawn_as_curves(tmp_path):
         assert "456.789" not in page.get_text(textpage=textpage)
 
 
+def make_rotated_scan(path, rotation):
+    """Digitalização gravada de lado e exibida em pé por /Rotate, como fazem scanners."""
+    with pymupdf.open() as scan:
+        page = scan.new_page(width=420, height=260)
+        page.insert_text((30, 80), "CPF: 123.456.789-00", fontsize=22)
+        page.insert_text((30, 180), "Ref. 2024/118", fontsize=22)
+        # A imagem gravada fica girada no sentido oposto ao do /Rotate.
+        page.set_rotation((360 - rotation) % 360)
+        image, stored = page.get_pixmap(dpi=300).tobytes("png"), page.rect
+    with pymupdf.open() as doc:
+        page = doc.new_page(width=stored.width, height=stored.height)
+        page.insert_image(page.rect, stream=image)
+        page.set_rotation(rotation)
+        doc.save(path)
+
+
+def ocr_as_displayed(page, tessdata):
+    """OCR da página em pé; o get_textpage_ocr recorta páginas giradas de 90 ou 270 graus."""
+    pixmap = page.get_pixmap(dpi=300)
+    with pymupdf.open() as doc:
+        upright = doc.new_page(width=page.rect.width, height=page.rect.height)
+        upright.insert_image(upright.rect, pixmap=pixmap)
+        textpage = upright.get_textpage_ocr(language="por+eng", tessdata=tessdata, full=True)
+        return upright.get_text(textpage=textpage)
+
+
+@pytest.mark.ocr
+@pytest.mark.parametrize("rotation", [90, 180, 270])
+def test_real_ocr_reads_scan_displayed_upright_by_rotation(tmp_path, rotation):
+    tessdata = os.environ.get("TEST_TESSDATA")
+    if not tessdata:
+        pytest.skip("Defina TEST_TESSDATA para executar OCR real com por+eng.")
+    source, target = tmp_path / "rotated-scan.pdf", tmp_path / "out.pdf"
+    make_rotated_scan(source, rotation)
+    report = censor_pdf(source, target, Policy(tessdata=tessdata))
+    assert report.pages[0].extraction == "ocr"
+    assert report.pages[0].counts == {"CPF": 1}
+    assert_black_at_regions(target, report, 300)
+    with pymupdf.open(target) as doc:
+        assert doc[0].rotation == rotation
+        text = ocr_as_displayed(doc[0], tessdata)
+    assert "456.789" not in text
+    assert "Ref. 2024" in text
+
+
 def make_unmapped_font_pdf(path):
     """Fonte Type3 sem ToUnicode e com glifos sem nome padrão, como em subconjuntos."""
     glyph = b"600 0 0 0 500 700 d1 0 0 500 700 re f"
